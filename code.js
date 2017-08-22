@@ -92,40 +92,43 @@ function processItem(item, listCounters, images) {
     var gt = listItem.getGlyphType();
     var key = listItem.getListId() + '.' + listItem.getNestingLevel();
     var counter = listCounters[key] || 0;
-
+    prefix = '';
+    suffix = '';
+    
     // First list item
     if ( counter == 0 ) {
-      // Bullet list (<ul>):
-      if (gt === DocumentApp.GlyphType.BULLET
-          || gt === DocumentApp.GlyphType.HOLLOW_BULLET
-          || gt === DocumentApp.GlyphType.SQUARE_BULLET) {
-        prefix = '<ul class="small"><li>', suffix = "</li>";
-
-          suffix += "</ul>";
+        // Ordered list (<ol>):
+        var type = '1';
+        if (gt == DocumentApp.GlyphType.LATIN_LOWER) {
+          type = 'a';
         }
-      else {
-        // Ordered list (<ol>):
-        prefix = "<ol><li>", suffix = "</li>";
-      }
+        prefix = '<i>' + key + '</i><ol type="' + type + '">';
     }
-    else {
-      prefix = "<li>";
-      suffix = "</li>";
-    }
+    
+    prefix += "<li>";
+    suffix += "</li>";
 
-    if (item.isAtDocumentEnd() || item.getNextSibling().getType() != DocumentApp.ElementType.LIST_ITEM) {
-      if (gt === DocumentApp.GlyphType.BULLET
-          || gt === DocumentApp.GlyphType.HOLLOW_BULLET
-          || gt === DocumentApp.GlyphType.SQUARE_BULLET) {
-        suffix += "</ul>";
-      }
-      else {
-        // Ordered list (<ol>):
+    if (item.isAtDocumentEnd()) {
+      suffix += "</ol>";
+    }
+    if (item.getNextSibling()) {
+      if (item.getNextSibling().getType() != DocumentApp.ElementType.LIST_ITEM) {
+          for (var i=0; i < item.getNestingLevel(); i++) {
+            suffix += "</li></ol>";
+          }
         suffix += "</ol>";
+      } else {
+        if (item.getNextSibling().getNestingLevel() < item.getNestingLevel() && item.getNextSibling().getListId() == item.getListId()) {
+          suffix += "</ol>";
+        } else if (item.getNextSibling().getNestingLevel() < item.getNestingLevel() && item.getNextSibling().getListId() != item.getListId()) {
+          for (var i=0; i < item.getNestingLevel(); i++) {
+            suffix += "</li></ol>";
+          }
+          suffix += "</ol>";
+        }
       }
-
-    }
-
+    };
+    
     counter++;
     listCounters[key] = counter;
   }
@@ -162,7 +165,7 @@ function processText(item, output) {
   if (indices.length <= 1) {
     // Assuming that a whole para fully italic is a quote
     if(item.isBold()) {
-      output.push('<b>' + text + '</b>');
+      output.push('<strong>' + text + '</strong>');
     }
     else if(item.isItalic()) {
       output.push('<blockquote>' + text + '</blockquote>');
@@ -188,7 +191,7 @@ function processText(item, output) {
         output.push('<i>');
       }
       if (partAtts.BOLD) {
-        output.push('<b>');
+        output.push('<strong>');
       }
       if (partAtts.UNDERLINE) {
         output.push('<u>');
@@ -211,7 +214,7 @@ function processText(item, output) {
         output.push('</i>');
       }
       if (partAtts.BOLD) {
-        output.push('</b>');
+        output.push('</strong>');
       }
       if (partAtts.UNDERLINE) {
         output.push('</u>');
